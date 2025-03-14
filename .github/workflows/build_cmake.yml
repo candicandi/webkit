@@ -224,6 +224,18 @@ jobs:
     #   shell: cmd
     #   run: py -m pip install jinja2 && py Tools\qt\installed-files-checker.py --version=5.212.0 --os=windows --install_prefix="${{ steps.qt_win.outputs.qt_dir }}" --icu_version=65 --toolchain=msvc --template=Tools\qt\QtBinaryChecklist.txt --release --verbose
 
+    - name: Package Build Results
+      shell: bash
+      run: |
+        mkdir -p artifacts
+        zip -r artifacts/${{ runner.os }}-build.zip build/
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ runner.os }}-build
+        path: artifacts/${{ runner.os }}-build.zip
+        
     - name: ccache stats
       if: always()
       shell: bash --noprofile --norc -eo pipefail -x {0}
