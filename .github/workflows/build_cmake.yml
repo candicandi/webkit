@@ -246,7 +246,7 @@ jobs:
     - name: Upload Install Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ runner.os }}-build
+        name: ${{ runner.os }}-install
         path: artifacts/${{ runner.os }}-install.zip
         
     - name: ccache stats
