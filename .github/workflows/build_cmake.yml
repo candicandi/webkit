@@ -228,3 +228,56 @@ jobs:
       if: always()
       shell: bash --noprofile --norc -eo pipefail -x {0}
       run: ccache -s
+
+  release:
+    name: Create Release and Upload Assets
+    runs-on: ubuntu-latest
+    needs: build  # 依赖 build 任务
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset (Linux)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/ubuntu-latest-build.zip
+          asset_name: linux-build.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release Asset (Windows)
+        if: contains(needs.build.result, 'windows')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/windows-latest-build.zip
+          asset_name: windows-build.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release Asset (macOS)
+        if: contains(needs.build.result, 'macos')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/macos-latest-build.zip
+          asset_name: macos-build.zip
+          asset_content_type: application/zip
