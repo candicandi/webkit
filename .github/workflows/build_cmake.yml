@@ -23,6 +23,7 @@ env:
   CCACHE_SLOPPINESS: "pch_defines,time_macros"
   CCACHE_HARDLINK: "true"
   QT_MODULES: "qtbase qtdeclarative qtlocation qtmultimedia qtsensors qtwebchannel"
+  INSTALL_DIR: "${{ github.workspace }}/install"
 
 jobs:
   build:
@@ -32,22 +33,22 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        #- {
-        #    name: "Ubuntu Release", artifact: "Linux",
-        #    os: ubuntu-latest,
-        #    build_type: Release,
-        #  }
+        - {
+            name: "Ubuntu Release", artifact: "Linux",
+            os: ubuntu-latest,
+            build_type: Release,
+          }
         #- {
         #    name: "macOS Release", artifact: "macOS",
         #    os: macos-latest,
         #    build_type: Release,
         #  }
-        - {
-            name: "Windows MSVC Conan Release", artifact: "Windows-MSVC",
-            os: windows-latest,
-            build_type: Release,
-            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-          }
+        #- {
+        #    name: "Windows MSVC Conan Release", artifact: "Windows-MSVC",
+        #    os: windows-latest,
+        #    build_type: Release,
+        #    environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+        #  }
 
     steps:
     - name: Sparse checkout
@@ -160,7 +161,7 @@ jobs:
     - name: Configure (Linux)
       if: runner.os == 'Linux'
       shell: bash --noprofile --norc -eo pipefail -x {0}
-      run: cmake $cmake_args -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+      run: cmake $cmake_args -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR
 
     - name: Configure (MSVC)
       if: runner.os == 'Windows' && matrix.config.environment_script != ''
@@ -209,6 +210,12 @@ jobs:
       shell: bash --noprofile --norc -eo pipefail -x {0}
       run: Tools/qt/build-qtwebkit-conan.py --build --install --ninjaargs="-j $HOST_N_CORES -v"
 
+    - name: Install
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        ninja -C build install
+        
     # - name: Verify (Linux)
     #   if: runner.os == 'Linux'
     #   shell: bash --noprofile --norc -eo pipefail -x {0}
@@ -229,12 +236,18 @@ jobs:
       run: |
         mkdir -p artifacts
         zip -r artifacts/${{ runner.os }}-build.zip build/
+        zip -r artifacts/${{ runner.os }}-install.zip $INSTALL_DIR
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{ runner.os }}-build
         path: artifacts/${{ runner.os }}-build.zip
+    - name: Upload Install Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-build
+        path: artifacts/${{ runner.os }}-install.zip
         
     - name: ccache stats
       if: always()
@@ -247,7 +260,7 @@ jobs:
     needs: build  # 依赖 build 任务
     steps:
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
